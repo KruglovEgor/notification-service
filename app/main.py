@@ -5,12 +5,20 @@ from fastapi import FastAPI, Request
 
 from app.core.config import get_settings
 from app.core.logging import setup_logging
+from app.routers.notifications import router as notifications_router
+from app.services import NotificationSender, NotificationService
+from app.storage.notification_storage import NotificationStorage
 
 settings = get_settings()
 setup_logging(settings.log_level)
 
 app = FastAPI(title="Notification Service", version="0.1.0")
 app.state.settings = settings
+app.state.notification_storage = NotificationStorage()
+app.state.notification_service = NotificationService(app.state.notification_storage)
+app.state.notification_sender = NotificationSender(app.state.notification_service)
+
+app.include_router(notifications_router)
 
 
 @app.middleware("http")
