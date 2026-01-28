@@ -27,15 +27,23 @@ Smart Notification Service — тестовый микросервис на Fast
 - `POSTGRES_DB`
 
 ## Запуск локально (без Docker)
-1) Установить зависимости:
+1) Создать виртуальное окружение:
 
-`uv pip install -e "[test]"`
+`uv venv`
 
-2) Запустить PostgreSQL (например, через Docker):
+2) Установить зависимости:
+
+`uv pip install -e ".[test]"`
+
+3) Запустить PostgreSQL (например, через Docker):
 
 `docker compose up -d db`
 
-3) Запустить приложение:
+4) Убедись, что в `.env` для локального запуска указан `localhost`:
+
+`DATABASE_URL=postgresql+asyncpg://postgres:postgres@localhost:5432/notifications`
+
+5) Запустить приложение:
 
 `uv run uvicorn app.main:app --reload`
 
