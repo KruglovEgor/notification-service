@@ -12,6 +12,7 @@ Smart Notification Service — тестовый микросервис на Fast
 ## Требования
 - Python 3.11+
 - Docker (для запуска через контейнеры)
+- uv
 
 ## Переменные окружения
 Сервис читает настройки из `.env`. Пример — [.env.example](.env.example).
@@ -25,6 +26,14 @@ Smart Notification Service — тестовый микросервис на Fast
 - `POSTGRES_USER`
 - `POSTGRES_PASSWORD`
 - `POSTGRES_DB`
+
+## Запуск через Docker Compose (рекомендуется)
+1) Создай `.env` на основе [.env.example](.env.example).
+2) Запуск:
+
+`docker compose up --build`
+
+Сервис будет доступен по адресу `http://localhost:${APP_PORT}`.
 
 ## Запуск локально (без Docker)
 1) Создать виртуальное окружение:
@@ -47,28 +56,47 @@ Smart Notification Service — тестовый микросервис на Fast
 
 `uv run uvicorn app.main:app --reload`
 
-## Запуск через Docker Compose (рекомендуется)
-1) Создай `.env` на основе [.env.example](.env.example).
-2) Запуск:
-
-`docker compose up --build`
-
-Сервис будет доступен по адресу `http://localhost:${APP_PORT}`.
-
-## Запуск только Docker (без compose)
+## Запуск с помощью Docker (без compose)
 1) Собрать образ:
 
 `docker build -t notification-service .`
 
-2) Запуск:
+2) Убедись, что БД запущена (рекомендуется через Docker Compose):
+
+`docker compose up -d db`
+
+3) Для запуска контейнера без compose укажи хост БД явно (контейнер не видит сервис `db`):
+
+`DATABASE_URL=postgresql+asyncpg://postgres:postgres@host.docker.internal:5432/notifications`
+
+4) Запуск:
 
 `docker run --env-file .env -p 8000:8000 notification-service`
 
 ## Тесты
+Требуется создать виртуальное окружение и установить зависимости:
+
+`uv venv`
+`uv pip install -e ".[test]"`
+
+Запуск тестов:
+
 `uv run pytest`
 
 ## API
-- `POST /api/notifications`
-- `GET /api/notifications/{user_id}?status=sent`
+## Статусы уведомлений
+- `pending` — создано и ожидает отправки.
+- `sent` — успешно отправлено.
+- `failed` — не удалось отправить после 3 попыток.
 
-Swagger: `http://localhost:${APP_PORT}/docs`
+### POST /api/notifications
+Создаёт уведомление и возвращает его со статусом `pending`, не блокируя клиента.
+
+Пример тела запроса:
+`{"user_id": 123, "message": "Ваш код: 1111", "type": "telegram"}`
+
+### GET /api/notifications/{user_id}?status=sent
+Возвращает список уведомлений пользователя. Параметр `status` опционален и фильтрует по статусу.
+
+## Swagger: 
+`http://localhost:${APP_PORT}/docs` - документация.
