@@ -10,6 +10,13 @@ dependencies = [
   "pydantic-settings>=2.2.1",
 ]
 
+[build-system]
+requires = ["setuptools>=68", "wheel"]
+build-backend = "setuptools.build_meta"
+
+[tool.setuptools]
+packages = ["app"]
+
 [project.optional-dependencies]
 test = [
   "pytest>=8.2.0",
