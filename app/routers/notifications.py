@@ -1,13 +1,16 @@
 from fastapi import APIRouter, BackgroundTasks, Depends, Query, Request, status
+from sqlalchemy.ext.asyncio import AsyncSession
 
+from app.core.database import get_session
 from app.schemas.notification import NotificationCreate, NotificationOut, NotificationType
 from app.services import NotificationSender, NotificationService
+from app.storage.notification_repository import NotificationRepository
 
 router = APIRouter(prefix="/api/notifications", tags=["notifications"])
 
 
-def get_service(request: Request) -> NotificationService:
-    return request.app.state.notification_service
+def get_service(session: AsyncSession = Depends(get_session)) -> NotificationService:
+    return NotificationService(NotificationRepository(session))
 
 
 def get_sender(request: Request) -> NotificationSender:
@@ -21,7 +24,7 @@ async def create_notification(
     service: NotificationService = Depends(get_service),
     sender: NotificationSender = Depends(get_sender),
 ) -> NotificationOut:
-    record = service.create(
+    record = await service.create(
         user_id=payload.user_id, message=payload.message, type=payload.type.value
     )
     background_tasks.add_task(sender.send, record.id, payload.type)
@@ -40,7 +43,7 @@ async def list_notifications(
     status: str | None = Query(default=None),
     service: NotificationService = Depends(get_service),
 ) -> list[NotificationOut]:
-    items = service.list_by_user(user_id=user_id, status=status)
+    items = await service.list_by_user(user_id=user_id, status=status)
     return [
         NotificationOut(
             id=item.id,

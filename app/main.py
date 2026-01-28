@@ -1,22 +1,30 @@
 import logging
 import time
+from contextlib import asynccontextmanager
 
 from fastapi import FastAPI, Request
 
 from app.core.config import get_settings
+from app.core.database import create_engine, create_sessionmaker, init_db
 from app.core.logging import setup_logging
 from app.routers.notifications import router as notifications_router
-from app.services import NotificationSender, NotificationService
-from app.storage.notification_storage import NotificationStorage
+from app.services import NotificationSender
 
 settings = get_settings()
 setup_logging(settings.log_level)
 
-app = FastAPI(title="Notification Service", version="0.1.0")
+@asynccontextmanager
+async def lifespan(app: FastAPI):
+    await init_db(app.state.db_engine)
+    yield
+    await app.state.db_engine.dispose()
+
+
+app = FastAPI(title="Notification Service", version="0.1.0", lifespan=lifespan)
 app.state.settings = settings
-app.state.notification_storage = NotificationStorage()
-app.state.notification_service = NotificationService(app.state.notification_storage)
-app.state.notification_sender = NotificationSender(app.state.notification_service)
+app.state.db_engine = create_engine(settings.database_url)
+app.state.db_sessionmaker = create_sessionmaker(app.state.db_engine)
+app.state.notification_sender = NotificationSender(app.state.db_sessionmaker)
 
 app.include_router(notifications_router)
 

@@ -1,12 +1,21 @@
+import os
+
+import pytest
+from typing import Generator
 from fastapi.testclient import TestClient
+
+os.environ.setdefault("DATABASE_URL", "sqlite+aiosqlite:///./test.db")
 
 from app.main import app
 
 
-client = TestClient(app)
+@pytest.fixture()
+def client() -> Generator[TestClient, None, None]:
+    with TestClient(app) as test_client:
+        yield test_client
 
 
-def test_create_notification() -> None:
+def test_create_notification(client: TestClient) -> None:
     response = client.post(
         "/api/notifications",
         json={"user_id": 1, "message": "Hello", "type": "email"},
@@ -17,7 +26,7 @@ def test_create_notification() -> None:
     assert data["status"] == "pending"
 
 
-def test_create_notification_validation_error() -> None:
+def test_create_notification_validation_error(client: TestClient) -> None:
     response = client.post(
         "/api/notifications",
         json={"user_id": 1, "message": "Hello", "type": "sms"},
@@ -25,7 +34,7 @@ def test_create_notification_validation_error() -> None:
     assert response.status_code == 422
 
 
-def test_list_notifications_filter_by_status() -> None:
+def test_list_notifications_filter_by_status(client: TestClient) -> None:
     client.post(
         "/api/notifications",
         json={"user_id": 2, "message": "Hi", "type": "telegram"},
