@@ -23,6 +23,7 @@ class NotificationSender:
             async with self._sessionmaker() as session:
                 service = NotificationService(NotificationRepository(session))
                 if failed and attempt < 3:
+                    await asyncio.sleep(10 * attempt)
                     continue
                 if failed:
                     await service.update_status(notification_id, "failed", attempt)
