@@ -1,3 +1,4 @@
+import asyncio
 import logging
 import time
 from contextlib import asynccontextmanager
@@ -5,8 +6,9 @@ from contextlib import asynccontextmanager
 from fastapi import FastAPI, Request
 
 from app.core.config import get_settings
-from app.core.database import create_engine, create_sessionmaker, init_db
+from app.core.database import create_engine, create_sessionmaker
 from app.core.logging import setup_logging
+from app.core.migrations import run_migrations
 from app.routers.notifications import router as notifications_router
 from app.services import NotificationSender
 
@@ -15,7 +17,7 @@ setup_logging(settings.log_level)
 
 @asynccontextmanager
 async def lifespan(app: FastAPI):
-    await init_db(app.state.db_engine)
+    await asyncio.to_thread(run_migrations, app.state.settings.database_url)
     yield
     await app.state.db_engine.dispose()
 
